@@ -1,0 +1,34 @@
+parameters:
+    level: max
+    paths:
+        - src
+        - tests
+    ignoreErrors:
+        # Constructor parameter holds the registered entries; PHPDoc is prohibited on constructors.
+        - identifier: missingType.iterableValue
+          path: src/ExceptionMappingTable.php
+
+        # Iteration over the constructor-typed array of entries; root cause is the same as above.
+        - identifier: method.nonObject
+          path: src/ExceptionMappingTable.php
+
+        # The mapTo return type cannot be inferred without the constructor-level array shape.
+        - identifier: return.type
+          path: src/ExceptionMappingTable.php
+
+        # Internal matcher accepts a list of class-strings; PHPDoc is prohibited inside src/Internal/.
+        - identifier: missingType.iterableValue
+          path: src/Internal/AnyExactClassMatcher.php
+
+        # Closure invocation is opaque to PHPStan; PHPDoc is prohibited inside src/Internal/.
+        - identifier: return.type
+          path: src/Internal/DynamicMappedErrorResolver.php
+
+        # json_decode in test assertions yields mixed; PHPDoc is prohibited inside tests/.
+        - identifier: offsetAccess.nonOffsetAccessible
+          path: tests/Unit/ErrorMiddlewareTest.php
+
+        # Same root cause as the offset access entry: assertArrayHasKey/NotHasKey receive mixed from json_decode.
+        - identifier: argument.type
+          path: tests/Unit/ErrorMiddlewareTest.php
+    reportUnmatchedIgnoredErrors: true
