@@ -8,6 +8,8 @@ use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
 use Throwable;
 use TinyBlocks\Http\CorrelationId\CorrelatedLogger;
+use TinyBlocks\Http\CorrelationId\CorrelationId;
+use TinyBlocks\Http\CorrelationId\CorrelationIdMiddleware;
 use TinyBlocks\Http\ErrorHandler\ErrorHandlingSettings;
 
 final readonly class ErrorLogger
@@ -27,7 +29,10 @@ final readonly class ErrorLogger
             return;
         }
 
-        $logger = CorrelatedLogger::from(logger: $this->logger)->resolve(request: $request);
+        $correlationId = $request->getAttribute(CorrelationIdMiddleware::ATTRIBUTE_NAME);
+        $logger = $correlationId instanceof CorrelationId
+            ? CorrelatedLogger::from(logger: $this->logger, correlationId: $correlationId)
+            : $this->logger;
 
         $context = ['message' => $exception->getMessage()];
 
