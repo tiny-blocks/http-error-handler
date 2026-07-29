@@ -28,10 +28,16 @@ final readonly class ErrorOutcome
             throw $exception;
         }
 
-        $this->errorLogger->log(request: $request, exception: $exception);
-
-        return is_null($mapped)
+        $response = is_null($mapped)
             ? FallbackResponse::from(settings: $this->settings, exception: $exception)->toResponse()
             : MappedResponse::from(mapped: $mapped)->toResponse();
+
+        $this->errorLogger->log(
+            status: $response->getStatusCode(),
+            request: $request,
+            exception: $exception
+        );
+
+        return $response;
     }
 }
