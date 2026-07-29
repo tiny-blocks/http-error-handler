@@ -23,7 +23,7 @@ final readonly class ErrorLogger
         return new ErrorLogger(logger: $logger, settings: $settings);
     }
 
-    public function log(ServerRequestInterface $request, Throwable $exception): void
+    public function log(int $status, ServerRequestInterface $request, Throwable $exception): void
     {
         if (is_null($this->logger) || !$this->settings->logErrors) {
             return;
@@ -43,6 +43,8 @@ final readonly class ErrorLogger
             $context['trace'] = $exception->getTraceAsString();
         }
 
-        $logger->error('error', $context);
+        ClientErrorStatus::matches(status: $status)
+            ? $logger->warning('error', $context)
+            : $logger->error('error', $context);
     }
 }

@@ -439,6 +439,104 @@ final class ErrorMiddlewareTest extends TestCase
         self::assertSame(Code::INTERNAL_SERVER_ERROR->value, $actual->getStatusCode());
     }
 
+    public function testProcessWhenUnmappedExceptionCarriesClientErrorCodeThenThatStatusIsUsed(): void
+    {
+        /** @Given a request for a path no route was registered at */
+        $request = new ServerRequest('GET', '/unknown');
+
+        /** @And a handler that throws an unmapped exception carrying 404 as its code */
+        $handler = $this->createStub(RequestHandlerInterface::class);
+        $handler->method('handle')->willThrowException(new RuntimeException('Not found.', 404));
+
+        /** @And a middleware with a mapping that declares no rules */
+        $middleware = ErrorMiddleware::create()
+            ->withMapping(mapping: new UnmappedExceptions())
+            ->build();
+
+        /** @When the middleware processes the request */
+        $actual = $middleware->process($request, $handler);
+
+        /** @Then the response carries the client error status the exception declared */
+        self::assertSame(Code::NOT_FOUND->value, $actual->getStatusCode());
+
+        /** @And the body names that status instead of an internal error */
+        self::assertJsonStringEqualsJsonString(
+            '{"code":"NOT_FOUND","message":"Not Found."}',
+            (string)$actual->getBody()
+        );
+    }
+
+    public function testProcessWhenUnmappedExceptionCarriesServerErrorCodeThenInternalErrorIsReturned(): void
+    {
+        /** @Given a request */
+        $request = new ServerRequest('GET', '/orders');
+
+        /** @And a handler that throws an unmapped exception carrying 503 as its code */
+        $handler = $this->createStub(RequestHandlerInterface::class);
+        $handler->method('handle')->willThrowException(new RuntimeException('Upstream down.', 503));
+
+        /** @And a middleware with a mapping that declares no rules */
+        $middleware = ErrorMiddleware::create()
+            ->withMapping(mapping: new UnmappedExceptions())
+            ->build();
+
+        /** @When the middleware processes the request */
+        $actual = $middleware->process($request, $handler);
+
+        /** @Then the response stays an internal error, since only client errors are adopted */
+        self::assertSame(Code::INTERNAL_SERVER_ERROR->value, $actual->getStatusCode());
+    }
+
+    public function testProcessWhenUnmappedExceptionCarriesNonHttpCodeThenInternalErrorIsReturned(): void
+    {
+        /** @Given a request */
+        $request = new ServerRequest('GET', '/orders');
+
+        /** @And a handler that throws an unmapped exception whose code is not an HTTP status */
+        $handler = $this->createStub(RequestHandlerInterface::class);
+        $handler->method('handle')->willThrowException(new RuntimeException('Driver failure.', 1045));
+
+        /** @And a middleware with a mapping that declares no rules */
+        $middleware = ErrorMiddleware::create()
+            ->withMapping(mapping: new UnmappedExceptions())
+            ->build();
+
+        /** @When the middleware processes the request */
+        $actual = $middleware->process($request, $handler);
+
+        /** @Then the response is an internal error */
+        self::assertSame(Code::INTERNAL_SERVER_ERROR->value, $actual->getStatusCode());
+    }
+
+    public function testProcessWhenResponseIsClientErrorThenItIsLoggedAsWarning(): void
+    {
+        /** @Given a request */
+        $request = new ServerRequest('POST', '/users');
+
+        /** @And a handler that throws an exception mapped to a client error */
+        $handler = $this->createStub(RequestHandlerInterface::class);
+        $handler->method('handle')->willThrowException(new LogicException('Email is not valid.'));
+
+        /** @And a logger that expects a warning and never an error */
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())->method('warning');
+        $logger->expects(self::never())->method('error');
+
+        /** @And a middleware mapping that exception to 422 with logErrors enabled */
+        $middleware = ErrorMiddleware::create()
+            ->withLogger(logger: $logger)
+            ->withMapping(mapping: new UnprocessableExceptions())
+            ->withSettings(settings: ErrorHandlingSettings::from(
+                logErrors: true,
+                logErrorDetails: false,
+                displayErrorDetails: false
+            ))
+            ->build();
+
+        /** @When the middleware processes the request */
+        $middleware->process($request, $handler);
+    }
+
     public function testProcessWhenMappingReturnsNullAndFallbackEnabledThenFallbackResponseIsReturned(): void
     {
         /** @Given a request */
@@ -472,7 +570,7 @@ final class ErrorMiddlewareTest extends TestCase
         self::assertArrayNotHasKey('trace', $body);
     }
 
-    public function testProcessWhenHandlerThrowsAndMappingResolvesAndLogErrorsEnabledThenErrorIsLogged(): void
+    public function testProcessWhenHandlerThrowsAndMappingResolvesAndLogErrorsEnabledThenWarningIsLogged(): void
     {
         /** @Given a request */
         $request = new ServerRequest('POST', '/transactions');
@@ -496,10 +594,10 @@ final class ErrorMiddlewareTest extends TestCase
             }
         };
 
-        /** @And a logger that expects exactly one error call */
+        /** @And a logger that expects exactly one warning call, since 422 is a client error */
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects(self::once())
-            ->method('error')
+            ->method('warning')
             ->with(
                 'error',
                 self::callback(function (array $context) use ($exceptionMessage): bool {
@@ -525,7 +623,7 @@ final class ErrorMiddlewareTest extends TestCase
         self::assertSame(Code::UNPROCESSABLE_ENTITY->value, $actual->getStatusCode());
     }
 
-    public function testProcessWhenFallbackDisabledAndMappingResolvesAndLogErrorsEnabledThenErrorIsLogged(): void
+    public function testProcessWhenFallbackDisabledAndMappingResolvesAndLogErrorsEnabledThenWarningIsLogged(): void
     {
         /** @Given a request */
         $request = new ServerRequest('PUT', '/config');
@@ -545,10 +643,10 @@ final class ErrorMiddlewareTest extends TestCase
             }
         };
 
-        /** @And a logger that expects exactly one error call */
+        /** @And a logger that expects exactly one warning call, since 400 is a client error */
         $logger = $this->createMock(LoggerInterface::class);
         $logger->expects(self::once())
-            ->method('error')
+            ->method('warning')
             ->with(
                 'error',
                 self::callback(function (array $context) use ($exceptionMessage): bool {

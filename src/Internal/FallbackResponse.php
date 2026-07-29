@@ -23,6 +23,15 @@ final readonly class FallbackResponse
 
     public function toResponse(): ResponseInterface
     {
+        $clientError = ClientErrorStatus::from(exception: $this->exception);
+
+        if (!is_null($clientError)) {
+            return Response::from(
+                body: ['code' => $clientError->name, 'message' => sprintf('%s.', $clientError->message())],
+                code: $clientError
+            );
+        }
+
         if ($this->settings->displayErrorDetails) {
             return Response::from(
                 body: [
