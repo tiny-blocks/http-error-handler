@@ -28,15 +28,15 @@
         "psr/http-server-handler": "^1.0",
         "psr/http-server-middleware": "^1.0",
         "psr/log": "^3.0",
-        "tiny-blocks/http": "^6.4",
+        "tiny-blocks/http": "^7.0",
         "tiny-blocks/http-correlation-id": "^2.1"
     },
     "require-dev": {
         "ergebnis/composer-normalize": "^2.52",
-        "guzzlehttp/psr7": "^2.13",
-        "infection/infection": "^0.33",
+        "guzzlehttp/psr7": "^3.0",
+        "infection/infection": "^0.34",
         "phpstan/phpstan": "^2.2",
-        "phpunit/phpunit": "^13.1",
+        "phpunit/phpunit": "^13.2",
         "slevomat/coding-standard": "^8.31",
         "slim/slim": "^4.15",
         "squizlabs/php_codesniffer": "^4.0"
