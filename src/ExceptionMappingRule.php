@@ -25,7 +25,7 @@ final readonly class ExceptionMappingRule
      * Closes the rule with a fixed MappedError produced from the given fields.
      *
      * @param string $code Machine-readable error code.
-     * @param int $status HTTP response status code (400-599).
+     * @param int $status HTTP response status code, one of the known HTTP error statuses.
      * @param string $message Human-readable error description.
      * @param array<string, string|string[]> $headers Optional HTTP response headers.
      * @return ExceptionMappingTable The table with the new rule appended.

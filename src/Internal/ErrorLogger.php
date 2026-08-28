@@ -4,14 +4,10 @@ declare(strict_types=1);
 
 namespace TinyBlocks\Http\ErrorHandler\Internal;
 
-use Psr\Http\Message\ServerRequestInterface;
 use Psr\Log\LoggerInterface;
-use Throwable;
 use TinyBlocks\Http\CorrelationId\CorrelatedLogger;
-use TinyBlocks\Http\CorrelationId\CorrelationId;
-use TinyBlocks\Http\CorrelationId\CorrelationIdMiddleware;
 use TinyBlocks\Http\ErrorHandler\ErrorHandlingSettings;
-use TinyBlocks\Http\ErrorHandler\Internal\Response\ClientErrorStatus;
+use TinyBlocks\Http\ErrorHandler\ReportedError;
 
 final readonly class ErrorLogger
 {
@@ -24,27 +20,24 @@ final readonly class ErrorLogger
         return new ErrorLogger(logger: $logger, settings: $settings);
     }
 
-    public function log(int $status, ServerRequestInterface $request, Throwable $exception): void
+    public function log(ReportedError $error): void
     {
         if (is_null($this->logger) || !$this->settings->logErrors) {
             return;
         }
 
-        $correlationId = $request->getAttribute(CorrelationIdMiddleware::ATTRIBUTE_NAME);
-        $logger = $correlationId instanceof CorrelationId
-            ? CorrelatedLogger::from(logger: $this->logger, correlationId: $correlationId)
-            : $this->logger;
+        $exception = $error->exception;
+        $logger = is_null($error->correlationId)
+            ? $this->logger
+            : CorrelatedLogger::from(logger: $this->logger, correlationId: $error->correlationId);
 
         $context = ['message' => $exception->getMessage()];
 
         if ($this->settings->logErrorDetails) {
-            $context['exception'] = $exception::class;
-            $context['file'] = $exception->getFile();
-            $context['line'] = $exception->getLine();
-            $context['trace'] = $exception->getTraceAsString();
+            $context = [...$context, ...ExceptionDetails::withInlineTrace(exception: $exception)->toArray()];
         }
 
-        ClientErrorStatus::matches(status: $status)
+        $error->status->isClientError()
             ? $logger->warning('error', $context)
             : $logger->error('error', $context);
     }

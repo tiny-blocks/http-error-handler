@@ -53,7 +53,7 @@ final readonly class ExceptionMappingTable
     public function mapTo(Throwable $exception): ?MappedError
     {
         foreach ($this->entries as $entry) {
-            $mappedError = $entry->resolve(exception: $exception);
+            $mappedError = $entry->resolve($exception);
 
             if (!is_null($mappedError)) {
                 return $mappedError;

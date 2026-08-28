@@ -17,7 +17,7 @@ final readonly class DefaultMappingEntry implements MappingEntry
 
     public function resolve(Throwable $exception): ?MappedError
     {
-        if (!$this->matcher->matches(exception: $exception)) {
+        if (!$this->matcher->matches($exception)) {
             return null;
         }
 

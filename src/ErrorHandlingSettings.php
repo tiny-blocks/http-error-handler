@@ -18,20 +18,6 @@ final readonly class ErrorHandlingSettings
     }
 
     /**
-     * Creates an ErrorHandlingSettings with all flags disabled.
-     *
-     * @return ErrorHandlingSettings The default settings instance.
-     */
-    public static function default(): ErrorHandlingSettings
-    {
-        return ErrorHandlingSettings::from(
-            logErrors: false,
-            logErrorDetails: false,
-            displayErrorDetails: false
-        );
-    }
-
-    /**
      * Creates an ErrorHandlingSettings from the given flags.
      *
      * @param bool $logErrors Whether to enable error logging when a logger is provided.
@@ -48,6 +34,20 @@ final readonly class ErrorHandlingSettings
             logErrors: $logErrors,
             logErrorDetails: $logErrorDetails,
             displayErrorDetails: $displayErrorDetails
+        );
+    }
+
+    /**
+     * Creates an ErrorHandlingSettings with all flags disabled.
+     *
+     * @return ErrorHandlingSettings The default settings instance.
+     */
+    public static function default(): ErrorHandlingSettings
+    {
+        return ErrorHandlingSettings::from(
+            logErrors: false,
+            logErrorDetails: false,
+            displayErrorDetails: false
         );
     }
 }

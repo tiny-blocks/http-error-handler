@@ -12,16 +12,16 @@ use TinyBlocks\Http\ErrorHandler\Internal\Mapping\AnyExactClassMatcher;
 
 final class AnyExactClassMatcherTest extends TestCase
 {
-    public function testMatchesWhenExceptionClassIsFirstInListThenReturnsTrue(): void
+    public function testMatchesWhenExceptionIsUnrelatedTypeThenReturnsFalse(): void
     {
-        /** @Given an AnyExactClassMatcher configured for RuntimeException and LogicException */
-        $matcher = new AnyExactClassMatcher(exceptionClasses: [RuntimeException::class, LogicException::class]);
+        /** @Given an AnyExactClassMatcher configured for RuntimeException only */
+        $matcher = new AnyExactClassMatcher(exceptionClasses: [RuntimeException::class]);
 
-        /** @When matching a RuntimeException (first entry in the list) */
-        $result = $matcher->matches(exception: new RuntimeException());
+        /** @When matching a LogicException (not in the list) */
+        $result = $matcher->matches(exception: new LogicException());
 
-        /** @Then the result is true */
-        self::assertTrue($result);
+        /** @Then the result is false */
+        self::assertFalse($result);
     }
 
     public function testMatchesWhenExceptionClassIsLastInListThenReturnsTrue(): void
@@ -36,6 +36,18 @@ final class AnyExactClassMatcherTest extends TestCase
         self::assertTrue($result);
     }
 
+    public function testMatchesWhenExceptionClassIsFirstInListThenReturnsTrue(): void
+    {
+        /** @Given an AnyExactClassMatcher configured for RuntimeException and LogicException */
+        $matcher = new AnyExactClassMatcher(exceptionClasses: [RuntimeException::class, LogicException::class]);
+
+        /** @When matching a RuntimeException (first entry in the list) */
+        $result = $matcher->matches(exception: new RuntimeException());
+
+        /** @Then the result is true */
+        self::assertTrue($result);
+    }
+
     public function testMatchesWhenExceptionIsSubclassOfListedClassThenReturnsFalse(): void
     {
         /** @Given an AnyExactClassMatcher configured for RuntimeException only */
@@ -45,18 +57,6 @@ final class AnyExactClassMatcherTest extends TestCase
         $result = $matcher->matches(exception: new OverflowException());
 
         /** @Then the result is false because the matcher is exact-class only */
-        self::assertFalse($result);
-    }
-
-    public function testMatchesWhenExceptionIsUnrelatedTypeThenReturnsFalse(): void
-    {
-        /** @Given an AnyExactClassMatcher configured for RuntimeException only */
-        $matcher = new AnyExactClassMatcher(exceptionClasses: [RuntimeException::class]);
-
-        /** @When matching a LogicException (not in the list) */
-        $result = $matcher->matches(exception: new LogicException());
-
-        /** @Then the result is false */
         self::assertFalse($result);
     }
 }

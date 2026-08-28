@@ -24,18 +24,6 @@ final class SubclassMatcherTest extends TestCase
         self::assertTrue($result);
     }
 
-    public function testMatchesWhenExceptionIsSubclassOfBaseClassThenReturnsTrue(): void
-    {
-        /** @Given a SubclassMatcher configured for RuntimeException */
-        $matcher = new SubclassMatcher(baseException: RuntimeException::class);
-
-        /** @When matching an OverflowException (subclass of RuntimeException) */
-        $result = $matcher->matches(exception: new OverflowException());
-
-        /** @Then the result is true */
-        self::assertTrue($result);
-    }
-
     public function testMatchesWhenExceptionIsUnrelatedTypeThenReturnsFalse(): void
     {
         /** @Given a SubclassMatcher configured for RuntimeException */
@@ -46,5 +34,17 @@ final class SubclassMatcherTest extends TestCase
 
         /** @Then the result is false */
         self::assertFalse($result);
+    }
+
+    public function testMatchesWhenExceptionIsSubclassOfBaseClassThenReturnsTrue(): void
+    {
+        /** @Given a SubclassMatcher configured for RuntimeException */
+        $matcher = new SubclassMatcher(baseException: RuntimeException::class);
+
+        /** @When matching an OverflowException (subclass of RuntimeException) */
+        $result = $matcher->matches(exception: new OverflowException());
+
+        /** @Then the result is true */
+        self::assertTrue($result);
     }
 }

@@ -11,13 +11,9 @@ final readonly class ClientErrorStatus
 {
     public static function from(Throwable $exception): ?Code
     {
-        $code = Code::tryFromNullable($exception->getCode());
+        $declaredCode = $exception->getCode();
+        $code = is_int($declaredCode) ? Code::tryFromNullable(code: $declaredCode) : null;
 
         return $code?->isClientError() === true ? $code : null;
-    }
-
-    public static function matches(int $status): bool
-    {
-        return $status >= Code::BAD_REQUEST->value && $status < Code::INTERNAL_SERVER_ERROR->value;
     }
 }

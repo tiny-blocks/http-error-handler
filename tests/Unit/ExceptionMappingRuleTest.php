@@ -12,6 +12,38 @@ use TinyBlocks\Http\ErrorHandler\MappedError;
 
 final class ExceptionMappingRuleTest extends TestCase
 {
+    public function testMapsToReturnsNewTableInstance(): void
+    {
+        /** @Given a table to derive a rule from */
+        $originalTable = ExceptionMappingTable::create();
+
+        /** @When calling mapsTo on a rule derived from the original table */
+        $newTable = $originalTable->when(exceptionClass: RuntimeException::class)
+            ->mapsTo(code: 'ERR', status: 400, message: 'error');
+
+        /** @Then a new table instance is returned */
+        self::assertNotSame($originalTable, $newTable);
+    }
+
+    public function testResolvesWithReturnsNewTableInstance(): void
+    {
+        /** @Given a table to derive a rule from */
+        $originalTable = ExceptionMappingTable::create();
+
+        /** @When calling resolvesWith on a rule derived from the original table */
+        $newTable = $originalTable->when(exceptionClass: RuntimeException::class)
+            ->resolvesWith(
+                resolver: fn(Throwable $thrownException): MappedError => new MappedError(
+                    code: 'ERR',
+                    status: 500,
+                    message: $thrownException->getMessage()
+                )
+            );
+
+        /** @Then a new table instance is returned */
+        self::assertNotSame($originalTable, $newTable);
+    }
+
     public function testMapsToWhenHeadersOmittedThenMappedErrorHasEmptyHeaders(): void
     {
         /** @Given a rule for RuntimeException with no headers specified */
@@ -67,37 +99,5 @@ final class ExceptionMappingRuleTest extends TestCase
         /** @Then the MappedError reflects the exception's message */
         self::assertNotNull($result);
         self::assertSame('Gateway unavailable.', $result->message);
-    }
-
-    public function testMapsToReturnsNewTableInstance(): void
-    {
-        /** @Given a table to derive a rule from */
-        $originalTable = ExceptionMappingTable::create();
-
-        /** @When calling mapsTo on a rule derived from the original table */
-        $newTable = $originalTable->when(exceptionClass: RuntimeException::class)
-            ->mapsTo(code: 'ERR', status: 400, message: 'error');
-
-        /** @Then a new table instance is returned */
-        self::assertNotSame($originalTable, $newTable);
-    }
-
-    public function testResolvesWithReturnsNewTableInstance(): void
-    {
-        /** @Given a table to derive a rule from */
-        $originalTable = ExceptionMappingTable::create();
-
-        /** @When calling resolvesWith on a rule derived from the original table */
-        $newTable = $originalTable->when(exceptionClass: RuntimeException::class)
-            ->resolvesWith(
-                resolver: fn(Throwable $thrownException): MappedError => new MappedError(
-                    code: 'ERR',
-                    status: 500,
-                    message: $thrownException->getMessage()
-                )
-            );
-
-        /** @Then a new table instance is returned */
-        self::assertNotSame($originalTable, $newTable);
     }
 }
