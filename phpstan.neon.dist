@@ -8,18 +8,48 @@ parameters:
         # Constructor parameter holds the registered entries; PHPDoc is prohibited on constructors.
         - identifier: missingType.iterableValue
           path: src/ExceptionMappingTable.php
+        # Constructor parameter holds the response headers; PHPDoc is prohibited on constructors.
+        - identifier: missingType.iterableValue
+          path: src/MappedError.php
+        # Constructor parameter holds the accumulated tags; PHPDoc is prohibited on constructors.
+        - identifier: missingType.iterableValue
+          path: src/ReportedError.php
+        # Tag values reach the provider untyped, because ReportedError cannot annotate the array they come from.
+        - identifier: argument.type
+          path: src/Internal/Reporting/SentryTags.php
+        # Header values reach the response untyped; root cause is the same as the MappedError entry above.
+        - identifier: argument.type
+          path: src/Internal/Response/MappedResponse.php
         # Iteration over the constructor-typed array of entries; root cause is the same as above.
         - identifier: method.nonObject
           path: src/ExceptionMappingTable.php
         # The mapTo return type cannot be inferred without the constructor-level array shape.
         - identifier: return.type
           path: src/ExceptionMappingTable.php
+        # Constructor parameter holds the composed reporters; PHPDoc is prohibited inside src/Internal/.
+        - identifier: missingType.iterableValue
+          path: src/Internal/Reporting/CompositeErrorReporter.php
+        # Iteration over the constructor-typed array of reporters; root cause is the same as above.
+        - identifier: method.nonObject
+          path: src/Internal/Reporting/CompositeErrorReporter.php
+        # Trace lines and the assembled detail map; PHPDoc is prohibited inside src/Internal/.
+        - identifier: missingType.iterableValue
+          path: src/Internal/ExceptionDetails.php
+        # Header map arrives from the MappedError constructor; PHPDoc is prohibited inside src/Internal/.
+        - identifier: missingType.iterableValue
+          path: src/Internal/Response/ResponseHeaders.php
         # Internal matcher accepts a list of class-strings; PHPDoc is prohibited inside src/Internal/.
         - identifier: missingType.iterableValue
-          path: src/Internal/AnyExactClassMatcher.php
+          path: src/Internal/Mapping/AnyExactClassMatcher.php
         # Closure invocation is opaque to PHPStan; PHPDoc is prohibited inside src/Internal/.
         - identifier: return.type
-          path: src/Internal/DynamicMappedErrorResolver.php
+          path: src/Internal/Mapping/DynamicMappedErrorResolver.php
+        # Tag map the fake exception replays; PHPDoc is prohibited on constructors and inside tests/.
+        - identifier: missingType.iterableValue
+          path: tests/Unit/ContextualException.php
+        # The replayed map cannot be narrowed without the constructor tag; root cause is the same as above.
+        - identifier: return.type
+          path: tests/Unit/ContextualException.php
         # json_decode in test assertions yields mixed; PHPDoc is prohibited inside tests/.
         - identifier: offsetAccess.nonOffsetAccessible
           path: tests/Unit/ErrorMiddlewareTest.php

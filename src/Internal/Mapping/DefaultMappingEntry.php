@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace TinyBlocks\Http\ErrorHandler\Internal;
+namespace TinyBlocks\Http\ErrorHandler\Internal\Mapping;
 
 use Throwable;
 use TinyBlocks\Http\ErrorHandler\ExceptionMatcher;
@@ -17,7 +17,7 @@ final readonly class DefaultMappingEntry implements MappingEntry
 
     public function resolve(Throwable $exception): ?MappedError
     {
-        if (!$this->matcher->matches(exception: $exception)) {
+        if (!$this->matcher->matches($exception)) {
             return null;
         }
 

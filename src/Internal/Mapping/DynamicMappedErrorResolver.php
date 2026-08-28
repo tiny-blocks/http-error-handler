@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace TinyBlocks\Http\ErrorHandler\Internal;
+namespace TinyBlocks\Http\ErrorHandler\Internal\Mapping;
 
 use Closure;
 use Throwable;

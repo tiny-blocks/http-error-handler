@@ -5,9 +5,9 @@ declare(strict_types=1);
 namespace TinyBlocks\Http\ErrorHandler;
 
 use Throwable;
-use TinyBlocks\Http\ErrorHandler\Internal\AnyExactClassMatcher;
-use TinyBlocks\Http\ErrorHandler\Internal\ExactClassMatcher;
-use TinyBlocks\Http\ErrorHandler\Internal\SubclassMatcher;
+use TinyBlocks\Http\ErrorHandler\Internal\Mapping\AnyExactClassMatcher;
+use TinyBlocks\Http\ErrorHandler\Internal\Mapping\ExactClassMatcher;
+use TinyBlocks\Http\ErrorHandler\Internal\Mapping\SubclassMatcher;
 
 /**
  * Fluent table of exception-to-MappedError rules, evaluated in registration order. The first
@@ -53,7 +53,7 @@ final readonly class ExceptionMappingTable
     public function mapTo(Throwable $exception): ?MappedError
     {
         foreach ($this->entries as $entry) {
-            $mappedError = $entry->resolve(exception: $exception);
+            $mappedError = $entry->resolve($exception);
 
             if (!is_null($mappedError)) {
                 return $mappedError;

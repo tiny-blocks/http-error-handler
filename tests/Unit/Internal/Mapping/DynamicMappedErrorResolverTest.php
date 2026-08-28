@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Test\TinyBlocks\Http\ErrorHandler\Unit\Internal;
+namespace Test\TinyBlocks\Http\ErrorHandler\Unit\Internal\Mapping;
 
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
 use Throwable;
-use TinyBlocks\Http\ErrorHandler\Internal\DynamicMappedErrorResolver;
+use TinyBlocks\Http\ErrorHandler\Internal\Mapping\DynamicMappedErrorResolver;
 use TinyBlocks\Http\ErrorHandler\MappedError;
 
 final class DynamicMappedErrorResolverTest extends TestCase

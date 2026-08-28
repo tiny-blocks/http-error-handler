@@ -58,6 +58,67 @@ final class ErrorMiddlewareTest extends TestCase
         self::assertSame($expected, $actual);
     }
 
+    public function testProcessWhenMappedServerErrorThenItIsLoggedAtErrorLevel(): void
+    {
+        /** @Given a request */
+        $request = new ServerRequest('GET', '/v1/orders');
+
+        /** @And a handler throwing an exception a rule describes as a server error */
+        $handler = $this->createStub(RequestHandlerInterface::class);
+        $handler->method('handle')->willThrowException(new RuntimeException('Upstream is down.'));
+
+        /** @And a logger that expects an error and never a warning */
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())->method('error');
+        $logger->expects(self::never())->method('warning');
+
+        /** @And a middleware mapping that exception to 503 with logErrors enabled */
+        $middleware = ErrorMiddleware::create()
+            ->withLogger(logger: $logger)
+            ->withMapping(mapping: new UnavailableExceptions())
+            ->withSettings(settings: ErrorHandlingSettings::from(
+                logErrors: true,
+                logErrorDetails: false,
+                displayErrorDetails: false
+            ))
+            ->build();
+
+        /** @When the middleware processes the request */
+        $actual = $middleware->process($request, $handler);
+
+        /** @Then the response carries the mapped status */
+        self::assertSame(Code::SERVICE_UNAVAILABLE->value, $actual->getStatusCode());
+    }
+
+    public function testProcessWhenResponseIsClientErrorThenItIsLoggedAsWarning(): void
+    {
+        /** @Given a request */
+        $request = new ServerRequest('POST', '/users');
+
+        /** @And a handler that throws an exception mapped to a client error */
+        $handler = $this->createStub(RequestHandlerInterface::class);
+        $handler->method('handle')->willThrowException(new LogicException('Email is not valid.'));
+
+        /** @And a logger that expects a warning and never an error */
+        $logger = $this->createMock(LoggerInterface::class);
+        $logger->expects(self::once())->method('warning');
+        $logger->expects(self::never())->method('error');
+
+        /** @And a middleware mapping that exception to 422 with logErrors enabled */
+        $middleware = ErrorMiddleware::create()
+            ->withLogger(logger: $logger)
+            ->withMapping(mapping: new UnprocessableExceptions())
+            ->withSettings(settings: ErrorHandlingSettings::from(
+                logErrors: true,
+                logErrorDetails: false,
+                displayErrorDetails: false
+            ))
+            ->build();
+
+        /** @When the middleware processes the request */
+        $middleware->process($request, $handler);
+    }
+
     public function testProcessWhenLogErrorsDisabledAndHandlerThrowsThenNoLogging(): void
     {
         /** @Given a request */
@@ -114,6 +175,9 @@ final class ErrorMiddlewareTest extends TestCase
     {
         /** @Then MappingNotConfigured should be thrown when building without a mapping */
         $this->expectException(MappingNotConfigured::class);
+        $this->expectExceptionMessage(
+            'No exception mapping was registered. Call withMapping or withMappings before building.'
+        );
 
         /** @When building a middleware without configuring a mapping */
         ErrorMiddleware::create()->build();
@@ -141,7 +205,7 @@ final class ErrorMiddlewareTest extends TestCase
                 logErrorDetails: false,
                 displayErrorDetails: false
             ))
-            ->withFallbackOnUnmapped(false)
+            ->withFallbackOnUnmapped(fallbackOnUnmapped: false)
             ->build();
 
         /** @Then the original exception should propagate without logging */
@@ -237,6 +301,33 @@ final class ErrorMiddlewareTest extends TestCase
         self::assertSame(Code::INTERNAL_SERVER_ERROR->value, $actual->getStatusCode());
     }
 
+    public function testProcessWhenUnmappedExceptionCarriesClientErrorCodeThenThatStatusIsUsed(): void
+    {
+        /** @Given a request for a path no route was registered at */
+        $request = new ServerRequest('GET', '/unknown');
+
+        /** @And a handler that throws an unmapped exception carrying 404 as its code */
+        $handler = $this->createStub(RequestHandlerInterface::class);
+        $handler->method('handle')->willThrowException(new RuntimeException('Not found.', 404));
+
+        /** @And a middleware with a mapping that declares no rules */
+        $middleware = ErrorMiddleware::create()
+            ->withMapping(mapping: new UnmappedExceptions())
+            ->build();
+
+        /** @When the middleware processes the request */
+        $actual = $middleware->process($request, $handler);
+
+        /** @Then the response carries the client error status the exception declared */
+        self::assertSame(Code::NOT_FOUND->value, $actual->getStatusCode());
+
+        /** @And the body names that status instead of an internal error */
+        self::assertJsonStringEqualsJsonString(
+            '{"code":"NOT_FOUND","message":"Not Found."}',
+            (string)$actual->getBody()
+        );
+    }
+
     public function testProcessWhenLogErrorDetailsEnabledThenLogContextContainsExceptionDetails(): void
     {
         /** @Given a request */
@@ -278,6 +369,48 @@ final class ErrorMiddlewareTest extends TestCase
         $actual = $middleware->process($request, $handler);
 
         /** @Then the response should be 500 */
+        self::assertSame(Code::INTERNAL_SERVER_ERROR->value, $actual->getStatusCode());
+    }
+
+    public function testProcessWhenUnmappedExceptionCarriesStringCodeThenInternalErrorIsReturned(): void
+    {
+        /** @Given a request */
+        $request = new ServerRequest('GET', '/orders');
+
+        /** @And a handler that throws an unmapped exception whose code is a SQLSTATE string */
+        $handler = $this->createStub(RequestHandlerInterface::class);
+        $handler->method('handle')->willThrowException(new SqlStateException('42S02'));
+
+        /** @And a middleware with a mapping that declares no rules */
+        $middleware = ErrorMiddleware::create()
+            ->withMapping(mapping: new UnmappedExceptions())
+            ->build();
+
+        /** @When the middleware processes the request */
+        $actual = $middleware->process($request, $handler);
+
+        /** @Then the response is an internal error */
+        self::assertSame(Code::INTERNAL_SERVER_ERROR->value, $actual->getStatusCode());
+    }
+
+    public function testProcessWhenUnmappedExceptionCarriesNonHttpCodeThenInternalErrorIsReturned(): void
+    {
+        /** @Given a request */
+        $request = new ServerRequest('GET', '/orders');
+
+        /** @And a handler that throws an unmapped exception whose code is not an HTTP status */
+        $handler = $this->createStub(RequestHandlerInterface::class);
+        $handler->method('handle')->willThrowException(new RuntimeException('Driver failure.', 1045));
+
+        /** @And a middleware with a mapping that declares no rules */
+        $middleware = ErrorMiddleware::create()
+            ->withMapping(mapping: new UnmappedExceptions())
+            ->build();
+
+        /** @When the middleware processes the request */
+        $actual = $middleware->process($request, $handler);
+
+        /** @Then the response is an internal error */
         self::assertSame(Code::INTERNAL_SERVER_ERROR->value, $actual->getStatusCode());
     }
 
@@ -439,104 +572,6 @@ final class ErrorMiddlewareTest extends TestCase
         self::assertSame(Code::INTERNAL_SERVER_ERROR->value, $actual->getStatusCode());
     }
 
-    public function testProcessWhenUnmappedExceptionCarriesClientErrorCodeThenThatStatusIsUsed(): void
-    {
-        /** @Given a request for a path no route was registered at */
-        $request = new ServerRequest('GET', '/unknown');
-
-        /** @And a handler that throws an unmapped exception carrying 404 as its code */
-        $handler = $this->createStub(RequestHandlerInterface::class);
-        $handler->method('handle')->willThrowException(new RuntimeException('Not found.', 404));
-
-        /** @And a middleware with a mapping that declares no rules */
-        $middleware = ErrorMiddleware::create()
-            ->withMapping(mapping: new UnmappedExceptions())
-            ->build();
-
-        /** @When the middleware processes the request */
-        $actual = $middleware->process($request, $handler);
-
-        /** @Then the response carries the client error status the exception declared */
-        self::assertSame(Code::NOT_FOUND->value, $actual->getStatusCode());
-
-        /** @And the body names that status instead of an internal error */
-        self::assertJsonStringEqualsJsonString(
-            '{"code":"NOT_FOUND","message":"Not Found."}',
-            (string)$actual->getBody()
-        );
-    }
-
-    public function testProcessWhenUnmappedExceptionCarriesServerErrorCodeThenInternalErrorIsReturned(): void
-    {
-        /** @Given a request */
-        $request = new ServerRequest('GET', '/orders');
-
-        /** @And a handler that throws an unmapped exception carrying 503 as its code */
-        $handler = $this->createStub(RequestHandlerInterface::class);
-        $handler->method('handle')->willThrowException(new RuntimeException('Upstream down.', 503));
-
-        /** @And a middleware with a mapping that declares no rules */
-        $middleware = ErrorMiddleware::create()
-            ->withMapping(mapping: new UnmappedExceptions())
-            ->build();
-
-        /** @When the middleware processes the request */
-        $actual = $middleware->process($request, $handler);
-
-        /** @Then the response stays an internal error, since only client errors are adopted */
-        self::assertSame(Code::INTERNAL_SERVER_ERROR->value, $actual->getStatusCode());
-    }
-
-    public function testProcessWhenUnmappedExceptionCarriesNonHttpCodeThenInternalErrorIsReturned(): void
-    {
-        /** @Given a request */
-        $request = new ServerRequest('GET', '/orders');
-
-        /** @And a handler that throws an unmapped exception whose code is not an HTTP status */
-        $handler = $this->createStub(RequestHandlerInterface::class);
-        $handler->method('handle')->willThrowException(new RuntimeException('Driver failure.', 1045));
-
-        /** @And a middleware with a mapping that declares no rules */
-        $middleware = ErrorMiddleware::create()
-            ->withMapping(mapping: new UnmappedExceptions())
-            ->build();
-
-        /** @When the middleware processes the request */
-        $actual = $middleware->process($request, $handler);
-
-        /** @Then the response is an internal error */
-        self::assertSame(Code::INTERNAL_SERVER_ERROR->value, $actual->getStatusCode());
-    }
-
-    public function testProcessWhenResponseIsClientErrorThenItIsLoggedAsWarning(): void
-    {
-        /** @Given a request */
-        $request = new ServerRequest('POST', '/users');
-
-        /** @And a handler that throws an exception mapped to a client error */
-        $handler = $this->createStub(RequestHandlerInterface::class);
-        $handler->method('handle')->willThrowException(new LogicException('Email is not valid.'));
-
-        /** @And a logger that expects a warning and never an error */
-        $logger = $this->createMock(LoggerInterface::class);
-        $logger->expects(self::once())->method('warning');
-        $logger->expects(self::never())->method('error');
-
-        /** @And a middleware mapping that exception to 422 with logErrors enabled */
-        $middleware = ErrorMiddleware::create()
-            ->withLogger(logger: $logger)
-            ->withMapping(mapping: new UnprocessableExceptions())
-            ->withSettings(settings: ErrorHandlingSettings::from(
-                logErrors: true,
-                logErrorDetails: false,
-                displayErrorDetails: false
-            ))
-            ->build();
-
-        /** @When the middleware processes the request */
-        $middleware->process($request, $handler);
-    }
-
     public function testProcessWhenMappingReturnsNullAndFallbackEnabledThenFallbackResponseIsReturned(): void
     {
         /** @Given a request */
@@ -568,6 +603,27 @@ final class ErrorMiddlewareTest extends TestCase
         self::assertArrayNotHasKey('file', $body);
         self::assertArrayNotHasKey('line', $body);
         self::assertArrayNotHasKey('trace', $body);
+    }
+
+    public function testProcessWhenUnmappedExceptionCarriesServerErrorCodeThenInternalErrorIsReturned(): void
+    {
+        /** @Given a request */
+        $request = new ServerRequest('GET', '/orders');
+
+        /** @And a handler that throws an unmapped exception carrying 503 as its code */
+        $handler = $this->createStub(RequestHandlerInterface::class);
+        $handler->method('handle')->willThrowException(new RuntimeException('Upstream down.', 503));
+
+        /** @And a middleware with a mapping that declares no rules */
+        $middleware = ErrorMiddleware::create()
+            ->withMapping(mapping: new UnmappedExceptions())
+            ->build();
+
+        /** @When the middleware processes the request */
+        $actual = $middleware->process($request, $handler);
+
+        /** @Then the response stays an internal error, since only client errors are adopted */
+        self::assertSame(Code::INTERNAL_SERVER_ERROR->value, $actual->getStatusCode());
     }
 
     public function testProcessWhenHandlerThrowsAndMappingResolvesAndLogErrorsEnabledThenWarningIsLogged(): void
@@ -663,7 +719,7 @@ final class ErrorMiddlewareTest extends TestCase
                 logErrorDetails: false,
                 displayErrorDetails: false
             ))
-            ->withFallbackOnUnmapped(false)
+            ->withFallbackOnUnmapped(fallbackOnUnmapped: false)
             ->build();
 
         /** @When the middleware processes the request */
@@ -725,7 +781,7 @@ final class ErrorMiddlewareTest extends TestCase
         /** @And a middleware with fallback disabled */
         $middleware = ErrorMiddleware::create()
             ->withMapping(mapping: new UnmappedExceptions())
-            ->withFallbackOnUnmapped(false)
+            ->withFallbackOnUnmapped(fallbackOnUnmapped: false)
             ->build();
 
         /** @Then the original exception should propagate */

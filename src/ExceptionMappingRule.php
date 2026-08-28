@@ -6,9 +6,9 @@ namespace TinyBlocks\Http\ErrorHandler;
 
 use Closure;
 use Throwable;
-use TinyBlocks\Http\ErrorHandler\Internal\DefaultMappingEntry;
-use TinyBlocks\Http\ErrorHandler\Internal\DynamicMappedErrorResolver;
-use TinyBlocks\Http\ErrorHandler\Internal\FixedMappedErrorResolver;
+use TinyBlocks\Http\ErrorHandler\Internal\Mapping\DefaultMappingEntry;
+use TinyBlocks\Http\ErrorHandler\Internal\Mapping\DynamicMappedErrorResolver;
+use TinyBlocks\Http\ErrorHandler\Internal\Mapping\FixedMappedErrorResolver;
 
 /**
  * Intermediate builder closing a rule registered on an {@see ExceptionMappingTable}. A rule
@@ -25,7 +25,7 @@ final readonly class ExceptionMappingRule
      * Closes the rule with a fixed MappedError produced from the given fields.
      *
      * @param string $code Machine-readable error code.
-     * @param int $status HTTP response status code (400-599).
+     * @param int $status HTTP response status code, one of the known HTTP error statuses.
      * @param string $message Human-readable error description.
      * @param array<string, string|string[]> $headers Optional HTTP response headers.
      * @return ExceptionMappingTable The table with the new rule appended.
