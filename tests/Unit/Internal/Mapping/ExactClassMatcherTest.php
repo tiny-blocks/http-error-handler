@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace Test\TinyBlocks\Http\ErrorHandler\Unit\Internal;
+namespace Test\TinyBlocks\Http\ErrorHandler\Unit\Internal\Mapping;
 
 use Exception;
 use LogicException;
 use OverflowException;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
-use TinyBlocks\Http\ErrorHandler\Internal\ExactClassMatcher;
+use TinyBlocks\Http\ErrorHandler\Internal\Mapping\ExactClassMatcher;
 
 final class ExactClassMatcherTest extends TestCase
 {

@@ -16,10 +16,10 @@ parameters:
           path: src/ExceptionMappingTable.php
         # Internal matcher accepts a list of class-strings; PHPDoc is prohibited inside src/Internal/.
         - identifier: missingType.iterableValue
-          path: src/Internal/AnyExactClassMatcher.php
+          path: src/Internal/Mapping/AnyExactClassMatcher.php
         # Closure invocation is opaque to PHPStan; PHPDoc is prohibited inside src/Internal/.
         - identifier: return.type
-          path: src/Internal/DynamicMappedErrorResolver.php
+          path: src/Internal/Mapping/DynamicMappedErrorResolver.php
         # json_decode in test assertions yields mixed; PHPDoc is prohibited inside tests/.
         - identifier: offsetAccess.nonOffsetAccessible
           path: tests/Unit/ErrorMiddlewareTest.php

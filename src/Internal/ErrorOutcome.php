@@ -9,6 +9,8 @@ use Psr\Http\Message\ServerRequestInterface;
 use Throwable;
 use TinyBlocks\Http\ErrorHandler\ErrorHandlingSettings;
 use TinyBlocks\Http\ErrorHandler\ExceptionMappingTable;
+use TinyBlocks\Http\ErrorHandler\Internal\Response\FallbackResponse;
+use TinyBlocks\Http\ErrorHandler\Internal\Response\MappedResponse;
 
 final readonly class ErrorOutcome
 {

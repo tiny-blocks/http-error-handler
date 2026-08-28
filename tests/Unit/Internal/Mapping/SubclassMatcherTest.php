@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace Test\TinyBlocks\Http\ErrorHandler\Unit\Internal;
+namespace Test\TinyBlocks\Http\ErrorHandler\Unit\Internal\Mapping;
 
 use LogicException;
 use OverflowException;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
-use TinyBlocks\Http\ErrorHandler\Internal\SubclassMatcher;
+use TinyBlocks\Http\ErrorHandler\Internal\Mapping\SubclassMatcher;
 
 final class SubclassMatcherTest extends TestCase
 {

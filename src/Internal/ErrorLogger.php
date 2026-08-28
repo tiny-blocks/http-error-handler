@@ -11,6 +11,7 @@ use TinyBlocks\Http\CorrelationId\CorrelatedLogger;
 use TinyBlocks\Http\CorrelationId\CorrelationId;
 use TinyBlocks\Http\CorrelationId\CorrelationIdMiddleware;
 use TinyBlocks\Http\ErrorHandler\ErrorHandlingSettings;
+use TinyBlocks\Http\ErrorHandler\Internal\Response\ClientErrorStatus;
 
 final readonly class ErrorLogger
 {

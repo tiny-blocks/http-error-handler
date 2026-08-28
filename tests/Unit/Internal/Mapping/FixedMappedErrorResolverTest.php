@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace Test\TinyBlocks\Http\ErrorHandler\Unit\Internal;
+namespace Test\TinyBlocks\Http\ErrorHandler\Unit\Internal\Mapping;
 
 use LogicException;
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
-use TinyBlocks\Http\ErrorHandler\Internal\FixedMappedErrorResolver;
+use TinyBlocks\Http\ErrorHandler\Internal\Mapping\FixedMappedErrorResolver;
 use TinyBlocks\Http\ErrorHandler\MappedError;
 
 final class FixedMappedErrorResolverTest extends TestCase
