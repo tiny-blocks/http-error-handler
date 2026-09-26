@@ -491,8 +491,13 @@ $middleware = ErrorMiddleware::create()
 An empty release becomes no release, because a working tree is not a version. An empty DSN leaves the SDK disabled,
 which is what an environment with reporting switched off wants, so the same wiring serves every environment.
 
+Nothing about the request reaches the project. The SDK is told never to read a body, and the request and the user it
+gathers on its own are dropped before sending, so a password in a login body, an authorization header or a query string
+never leaves the process. The method and the path an event needs travel in the `http` context described below.
+
 The second takes a hub the application already holds, for an application that boots the SDK itself because it needs a
-sample rate, a transport, or an integration this reporter does not configure. It touches no global state.
+sample rate, a transport, or an integration this reporter does not configure. It touches no global state, and what
+that hub sends, the request and the user included, is the application's to decide.
 
 ```php
 $middleware = ErrorMiddleware::create()

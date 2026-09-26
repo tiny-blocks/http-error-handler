@@ -11,8 +11,10 @@ use PHPUnit\Framework\TestCase;
 use Psr\Http\Message\ServerRequestInterface;
 use Psr\Http\Server\RequestHandlerInterface;
 use RuntimeException;
+use Sentry\Event;
 use Sentry\SentrySdk;
 use Sentry\Severity;
+use Sentry\UserDataBag;
 use Test\TinyBlocks\Http\ErrorHandler\Unit\ContextualException;
 use Test\TinyBlocks\Http\ErrorHandler\Unit\PrioritizedException;
 use Test\TinyBlocks\Http\ErrorHandler\Unit\RecordingSentry;
@@ -427,6 +429,55 @@ final class SentryReporterTest extends TestCase
         self::assertSame('client-gateway@1.0.0', $options->getRelease());
         self::assertSame('development', $options->getEnvironment());
         self::assertSame('1', $options->getDsn()?->getProjectId());
+    }
+
+    public function testInitializedWithThenTheSdkNeverReadsTheRequestBody(): void
+    {
+        /** @Given the deployment values an application resolves from its environment */
+        $dsn = 'https://examplePublicKey@o0.ingest.sentry.io/1';
+
+        /** @When a reporter is built from them */
+        SentryReporter::initializedWith(dsn: $dsn, release: 'client-gateway@1.0.0', environment: 'development');
+
+        /** @Then the SDK is told never to read a body, so a password in one is never gathered */
+        $options = SentrySdk::getCurrentHub()->getClient()?->getOptions();
+        self::assertNotNull($options);
+        self::assertSame('never', $options->getMaxRequestBodySize());
+        self::assertFalse($options->shouldSendDefaultPii());
+    }
+
+    public function testInitializedWithWhenTheSdkGathersTheRequestAndTheUserThenNeitherIsSent(): void
+    {
+        /** @Given a reporter built from the deployment values */
+        SentryReporter::initializedWith(
+            dsn: 'https://examplePublicKey@o0.ingest.sentry.io/1',
+            release: 'client-gateway@1.0.0',
+            environment: 'development'
+        );
+
+        /** @And an event carrying what the SDK gathers on its own while a login fails */
+        $user = UserDataBag::createFromUserIdentifier(id: '0199a1b2-7c3d-7e4f-8a5b-6c7d8e9f0a1b')
+            ->setEmail(email: 'ana@example.com');
+
+        $event = Event::createEvent()
+            ->setUser(user: $user)
+            ->setRequest(request: [
+                'url'          => 'https://api.example.com/v1/sessions?phone=5511999999999',
+                'data'         => ['email' => 'ana@example.com', 'password' => 'correct horse'],
+                'method'       => 'POST',
+                'headers'      => ['Authorization' => ['Bearer token']],
+                'query_string' => 'phone=5511999999999'
+            ]);
+
+        /** @When the SDK runs the hook it calls before sending */
+        $options = SentrySdk::getCurrentHub()->getClient()?->getOptions();
+        self::assertNotNull($options);
+        $sent = ($options->getBeforeSendCallback())($event, null);
+
+        /** @Then the event leaves without the request and without the user */
+        self::assertNotNull($sent);
+        self::assertNull($sent->getUser());
+        self::assertSame([], $sent->getRequest());
     }
 
     public function testReportWhenTheConsumerReplacesTheRuleThenItsPriorityDecides(): void

@@ -10,6 +10,7 @@ use Sentry\State\Hub;
 use Sentry\State\HubInterface;
 use Sentry\State\Scope;
 use TinyBlocks\Http\ErrorHandler\ErrorReporter;
+use TinyBlocks\Http\ErrorHandler\Internal\Reporting\SentryPrivacy;
 use TinyBlocks\Http\ErrorHandler\Internal\Reporting\SentryScope;
 use TinyBlocks\Http\ErrorHandler\ReportedError;
 use TinyBlocks\Http\ErrorHandler\ReportingFilter;
@@ -55,6 +56,10 @@ final readonly class SentryReporter implements ErrorReporter
      * <p>An empty release becomes no release, because a working tree is not a version. An empty DSN
      * leaves the SDK disabled, which is what an environment with reporting switched off wants.</p>
      *
+     * <p>The request never reaches the project. The SDK reads no body, and the request and the user
+     * it gathers on its own are dropped before sending, so a password in a login body, an
+     * authorization header or a query string never leaves the process.</p>
+     *
      * @param string $dsn The DSN of the Sentry project, empty to leave the SDK disabled.
      * @param string $release The version the deploy reports, as <code>package@version</code>.
      * @param string $environment The environment the deploy runs in.
@@ -68,9 +73,11 @@ final readonly class SentryReporter implements ErrorReporter
         ReportingFilter $filter = ReportingFilter::SERVER_ERRORS
     ): SentryReporter {
         $client = ClientBuilder::create(options: [
-            'dsn'         => $dsn,
-            'release'     => $release === '' ? null : $release,
-            'environment' => $environment
+            'dsn'                   => $dsn,
+            'release'               => $release === '' ? null : $release,
+            'environment'           => $environment,
+            'before_send'           => SentryPrivacy::strip(...),
+            'max_request_body_size' => 'never'
         ])->getClient();
 
         return new SentryReporter(hub: SentrySdk::setCurrentHub(hub: new Hub(client: $client)), filter: $filter);
