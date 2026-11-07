@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Test\TinyBlocks\Http\ErrorHandler\Unit;
 
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 use TinyBlocks\Http\ErrorHandler\Exceptions\HttpHeaderMalformed;
 use TinyBlocks\Http\ErrorHandler\Exceptions\HttpStatusOutOfRange;
@@ -73,6 +74,18 @@ final class MappedErrorTest extends TestCase
         self::assertSame(511, $error->status);
     }
 
+    #[DataProvider('trailersOnlyTeHeadersProvider')]
+    public function testConstructionWhenTeHeaderCarriesOnlyTrailersThenHeaderIsPreserved(array $headers): void
+    {
+        /** @Given a TE header whose every value is trailers, the only TE value a response may carry */
+
+        /** @When constructing a MappedError with that header */
+        $error = new MappedError(code: 'ERR', status: 422, message: 'An error occurred.', headers: $headers);
+
+        /** @Then the header should be preserved as provided */
+        self::assertSame($headers, $error->headers);
+    }
+
     public function testConstructionWhenHeaderNameIsMalformedThenHttpHeaderMalformedIsThrown(): void
     {
         /** @Given a header whose name carries a character no HTTP field name admits */
@@ -131,6 +144,18 @@ final class MappedErrorTest extends TestCase
         new MappedError(code: 'ERR', status: 429, message: 'An error occurred.', headers: $headers);
     }
 
+    #[DataProvider('connectionSpecificHeadersProvider')]
+    public function testConstructionWhenHeaderIsConnectionSpecificThenHttpHeaderMalformedIsThrown(array $headers): void
+    {
+        /** @Given a connection-specific header, which HTTP/2 and HTTP/3 treat as a malformed response */
+
+        /** @Then a malformed header exception should be thrown */
+        $this->expectException(HttpHeaderMalformed::class);
+
+        /** @When constructing a MappedError with that header */
+        new MappedError(code: 'ERR', status: 503, message: 'An error occurred.', headers: $headers);
+    }
+
     public function testConstructionWhenStatusExceedsUpperBoundaryThenHttpStatusOutOfRangeIsThrown(): void
     {
         /** @Then an exception indicating the status is out of range should be thrown */
@@ -173,5 +198,28 @@ final class MappedErrorTest extends TestCase
 
         /** @When constructing a MappedError with that header */
         new MappedError(code: 'ERR', status: 422, message: 'An error occurred.', headers: $headers);
+    }
+
+    public static function trailersOnlyTeHeadersProvider(): array
+    {
+        return [
+            'TE with trailers'                => ['headers' => ['TE' => 'trailers']],
+            'TE with padded capital trailers' => ['headers' => ['TE' => ' Trailers ']],
+            'TE with trailers in every value' => ['headers' => ['te' => ['trailers', 'TRAILERS']]]
+        ];
+    }
+
+    public static function connectionSpecificHeadersProvider(): array
+    {
+        return [
+            'Connection'                     => ['headers' => ['Connection' => 'close']],
+            'Keep-Alive'                     => ['headers' => ['Keep-Alive' => 'timeout=5']],
+            'Proxy-Connection in upper case' => ['headers' => ['PROXY-CONNECTION' => 'keep-alive']],
+            'Transfer-Encoding'              => ['headers' => ['Transfer-Encoding' => 'chunked']],
+            'Upgrade in lower case'          => ['headers' => ['upgrade' => 'h2c']],
+            'TE with a coding'               => ['headers' => ['TE' => 'gzip']],
+            'TE with a numeric value'        => ['headers' => ['TE' => 1]],
+            'TE with trailers and a coding'  => ['headers' => ['te' => ['trailers', 'gzip']]]
+        ];
     }
 }

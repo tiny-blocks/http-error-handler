@@ -47,6 +47,9 @@ parameters:
         # Tag map the fake exception replays; PHPDoc is prohibited on constructors and inside tests/.
         - identifier: missingType.iterableValue
           path: tests/Unit/ContextualException.php
+        # Header maps the data providers feed to the tests; PHPDoc is prohibited inside tests/.
+        - identifier: missingType.iterableValue
+          path: tests/Unit/MappedErrorTest.php
         # The replayed map cannot be narrowed without the constructor tag; root cause is the same as above.
         - identifier: return.type
           path: tests/Unit/ContextualException.php

@@ -579,11 +579,16 @@ Slim. Any framework works, as long as the closure returns the pattern and never 
 Three exceptions reach the consumer, and every one of them reports a configuration mistake rather than a runtime
 condition.
 
-| Exception              | Thrown when                                                             |
-|------------------------|-------------------------------------------------------------------------|
-| `MappingNotConfigured` | `build()` runs before a single mapping is registered                    |
-| `HttpStatusOutOfRange` | a rule maps to a status that is not a known HTTP error status           |
-| `HttpHeaderMalformed`  | a rule declares a header whose name or value is not a well-formed field |
+| Exception              | Thrown when                                                                                           |
+|------------------------|-------------------------------------------------------------------------------------------------------|
+| `MappingNotConfigured` | `build()` runs before a single mapping is registered                                                  |
+| `HttpStatusOutOfRange` | a rule maps to a status that is not a known HTTP error status                                         |
+| `HttpHeaderMalformed`  | a rule declares a header whose name or value is not a well-formed field, or a connection-specific one |
+
+Connection-specific headers are `Connection`, `Keep-Alive`, `Proxy-Connection`, `Transfer-Encoding`, `Upgrade`, and
+`TE` with any value other than `trailers`. HTTP/2 and HTTP/3 treat a response carrying one as malformed, and
+`tiny-blocks/http` refuses to set one on a response, so `MappedError` refuses it up front instead of letting the error
+response fail while it is being built.
 
 A rule closed with `mapsTo` builds its `MappedError` while the table is being declared, so a wrong status or a malformed
 header fails at boot rather than on the first request that would have returned it. A rule closed with
