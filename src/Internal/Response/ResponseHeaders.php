@@ -6,8 +6,8 @@ namespace TinyBlocks\Http\ErrorHandler\Internal\Response;
 
 final readonly class ResponseHeaders
 {
-    private const string NAME = '/^[!#$%&\'*+\-.^_`|~0-9A-Za-z]+$/';
-    private const string VALUE = '/^[\x20\x09\x21-\x7E\x80-\xFF]*$/';
+    private const string NAME = '/^[!#$%&\'*+\-.^_`|~0-9A-Za-z]+$/D';
+    private const string VALUE = '/^[\x20\x09\x21-\x7E\x80-\xFF]*$/D';
 
     public static function malformedIn(array $headers): ?string
     {

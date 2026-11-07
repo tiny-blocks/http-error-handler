@@ -107,6 +107,30 @@ final class MappedErrorTest extends TestCase
         new MappedError(code: 'ERR', status: 429, message: 'An error occurred.', headers: $headers);
     }
 
+    public function testConstructionWhenHeaderNameEndsInLineFeedThenHttpHeaderMalformedIsThrown(): void
+    {
+        /** @Given a header whose name ends in a line feed, which a dollar anchor alone would let through */
+        $headers = ["Retry-After\n" => '60'];
+
+        /** @Then a malformed header exception should be thrown */
+        $this->expectException(HttpHeaderMalformed::class);
+
+        /** @When constructing a MappedError with that header */
+        new MappedError(code: 'ERR', status: 429, message: 'An error occurred.', headers: $headers);
+    }
+
+    public function testConstructionWhenHeaderValueEndsInLineFeedThenHttpHeaderMalformedIsThrown(): void
+    {
+        /** @Given a well-formed name carrying a value that ends in a line feed */
+        $headers = ['Retry-After' => "60\n"];
+
+        /** @Then a malformed header exception should be thrown */
+        $this->expectException(HttpHeaderMalformed::class);
+
+        /** @When constructing a MappedError with that header */
+        new MappedError(code: 'ERR', status: 429, message: 'An error occurred.', headers: $headers);
+    }
+
     public function testConstructionWhenStatusExceedsUpperBoundaryThenHttpStatusOutOfRangeIsThrown(): void
     {
         /** @Then an exception indicating the status is out of range should be thrown */
